@@ -1,17 +1,16 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
-    public Brick BrickPrefab;
-    public int LineCount = 6;
-    public Rigidbody Ball;
+    [SerializeField] Brick _brickPrefab;
+    [SerializeField] int _lineCount = 6;
+    [SerializeField] Rigidbody _ball;
 
-    public Text ScoreText;
-    public GameObject GameOverText;
+    [SerializeField] Text _scoreText;
+    [SerializeField] Text _bestScoreText;
+    [SerializeField] GameObject GameOverText;
     
     private bool m_Started = false;
     private int m_Points;
@@ -26,16 +25,24 @@ public class MainManager : MonoBehaviour
         int perLine = Mathf.FloorToInt(4.0f / step);
         
         int[] pointCountArray = new [] {1,1,2,2,5,5};
-        for (int i = 0; i < LineCount; ++i)
+        for (int i = 0; i < _lineCount; ++i)
         {
             for (int x = 0; x < perLine; ++x)
             {
                 Vector3 position = new Vector3(-1.5f + step * x, 2.5f + i * 0.3f, 0);
-                var brick = Instantiate(BrickPrefab, position, Quaternion.identity);
+                var brick = Instantiate(_brickPrefab, position, Quaternion.identity);
                 brick.PointValue = pointCountArray[i];
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        UpdateBestScore();
+    }
+
+    private void UpdateBestScore()
+    {
+        if (ScoreTracker.Instance != null)
+            _bestScoreText.text = $"Best score: {ScoreTracker.Instance.TopResult.Name} - {ScoreTracker.Instance.TopResult.Score}";
     }
 
     private void Update()
@@ -49,8 +56,8 @@ public class MainManager : MonoBehaviour
                 Vector3 forceDir = new Vector3(randomDirection, 1, 0);
                 forceDir.Normalize();
 
-                Ball.transform.SetParent(null);
-                Ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
+                _ball.transform.SetParent(null);
+                _ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
             }
         }
         else if (m_GameOver)
@@ -65,12 +72,19 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        _scoreText.text = $"Score : {m_Points}";
+        if (ScoreTracker.Instance != null)
+            ScoreTracker.Instance.UpdateCurrentScore(m_Points);
     }
 
     public void GameOver()
     {
-        m_GameOver = true;
+        if (ScoreTracker.Instance != null)
+        {
+            ScoreTracker.Instance.SaveData();
+            UpdateBestScore();
+        }
+         m_GameOver = true;
         GameOverText.SetActive(true);
     }
 }
